@@ -2,9 +2,11 @@ package framework.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import framework.util.StringIntegerList.StringInteger;
@@ -21,13 +23,20 @@ public class Tokenizer {
 		}
 	}
 
-	public List<StringInteger> tokenize(String sentence) {
+	public Map<String, List<Integer>> tokenize(String sentence) {
 		String[] split = sentence.split(regex);
-		List<StringInteger> positions = new LinkedList<StringInteger>();
+		//List<StringInteger> positions = new LinkedList<StringInteger>();
 		int position = 0;
+		Map<String,List<Integer>> positions = new HashMap<String,List<Integer>>();
 		for(String token : split){
 			if(!stopWords.contains(token)){
-				positions.add(new StringInteger(token, position));
+				if (positions.containsKey(token)){
+					positions.get(token).add(position);
+				} else {
+					List<Integer> l = new ArrayList<Integer>();
+					l.add(position);
+					positions.put(token, l);
+				}
 			}
 			position++;
 		}

@@ -3,6 +3,7 @@ package framework.util;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -18,14 +19,23 @@ public class StringIntegerList implements Writable {
 	public static class StringInteger implements Writable {
 		private String s;
 		private int t;
-		public static Pattern p = Pattern.compile("(.+),(\\d+)");
+		private int[] pos;
+		public static Pattern p = Pattern.compile("(.+),(\\d+),\\[(.*?)\\]");
 
 		public StringInteger() {
 		}
-
-		public StringInteger(String s, int t) {
+		
+		//constructor for actual StringInteger pair; used in Tokenizer
+		public StringInteger(String s, int t){
 			this.s = s;
 			this.t = t;
+			this.pos = null;
+		}
+
+		public StringInteger(String s, int t, int[] positions) {
+			this.s = s;
+			this.t = t;
+			this.pos = positions;
 		}
 
 		public String getString() {
@@ -35,6 +45,10 @@ public class StringIntegerList implements Writable {
 		public int getValue() {
 			return t;
 		}
+		
+		public int[] getPositions(){
+			return pos;
+		}
 
 		public void readFields(DataInput arg0) throws IOException {
 			String indexStr = arg0.readUTF();
@@ -43,7 +57,19 @@ public class StringIntegerList implements Writable {
 			if (m.matches()) {
 				this.s = m.group(1);
 				this.t = Integer.parseInt(m.group(2));
+				this.pos = convertPos(m.group(3));
 			}
+		}
+		
+		static private int[] convertPos(String positions){
+			String[] split = positions.split(",");
+			int[] intPos = new int[split.length];
+			int c = 0;
+			for(String p: split){
+				intPos[c] = Integer.parseInt(p);
+				c++;
+			}
+			return intPos;
 		}
 
 		public void write(DataOutput arg0) throws IOException {
@@ -51,6 +77,8 @@ public class StringIntegerList implements Writable {
 			sb.append(s);
 			sb.append(",");
 			sb.append(t);
+			sb.append(",");
+			sb.append(Arrays.toString(pos));
 			arg0.writeUTF(sb.toString());
 		}
 
@@ -59,10 +87,10 @@ public class StringIntegerList implements Writable {
 			return s + "," + t;
 		}
 	}
-
+	//TODO: make changes to SIL to support the new positions array in StringInteger
 	private List<StringInteger> indices;
 	private Map<String, Integer> indiceMap;
-	private Pattern p = Pattern.compile("<([^>]+),(\\d+)>");
+	private Pattern p = Pattern.compile("<([^>]+),(\\d+),\\[(.*?)\\]>");
 
 	public StringIntegerList() {
 		indices = new Vector<StringInteger>();
@@ -71,12 +99,13 @@ public class StringIntegerList implements Writable {
 	public StringIntegerList(List<StringInteger> indices) {
 		this.indices = indices;
 	}
-
+	
+	//modify this to form the SIL with the new positions array
 	public StringIntegerList(Map<String, Integer> indiceMap) {
 		this.indiceMap = indiceMap;
 		this.indices = new Vector<StringInteger>();
 		for (String index : indiceMap.keySet()) {
-			this.indices.add(new StringInteger(index, indiceMap.get(index)));
+			this.indices.add(new StringInteger(index, indiceMap.get(index), null)); //TODO: !! NULL for now
 		}
 	}
 
@@ -99,7 +128,7 @@ public class StringIntegerList implements Writable {
 		List<StringInteger> tempoIndices = new Vector<StringInteger>();
 		Matcher m = p.matcher(indicesStr);
 		while (m.find()) {
-			StringInteger index = new StringInteger(m.group(1), Integer.parseInt(m.group(2)));
+			StringInteger index = new StringInteger(m.group(1), Integer.parseInt(m.group(2)), StringInteger.convertPos(m.group(3))); //TODO: !! NULL for now
 			tempoIndices.add(index);
 		}
 		this.indices = tempoIndices;
@@ -124,6 +153,8 @@ public class StringIntegerList implements Writable {
 			sb.append(index.getString());
 			sb.append(",");
 			sb.append(index.getValue());
+			sb.append(",");
+			sb.append(index.getPositions().toString());
 			sb.append(">");
 			if (i != indices.size() - 1) {
 				sb.append(",");
