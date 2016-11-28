@@ -1,4 +1,4 @@
-package qwiki.search;
+package qwiki.indexer;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ import framework.util.StringIntegerList;
 import framework.util.StringIntegerList.StringInteger;
 import framework.util.Tokenizer;
 import framework.util.WikipediaPageInputFormat;
-import qwiki.search.GetArticlesMapred.GetArticlesMapper;
+import qwiki.indexer.GetArticlesMapred.GetArticlesMapper;
 
 public class TestCanvas {
 	public static class TestMapper extends Mapper<LongWritable, WikipediaPage, Text, StringIntegerList> {

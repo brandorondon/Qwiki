@@ -1,4 +1,4 @@
-package qwiki.search;
+package qwiki.indexer;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
