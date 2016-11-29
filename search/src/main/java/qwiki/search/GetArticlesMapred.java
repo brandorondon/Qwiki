@@ -33,12 +33,11 @@ public class GetArticlesMapred {
 		public void map(LongWritable offset, WikipediaPage inputPage, Context context)
 				throws IOException, InterruptedException {
 			// TODO: You should implement getting article mapper here
-			Text title = new Text();
-			Text xml = new Text();
+			
 			try {
 				if(inputPage != null){
 					if(inputPage.isArticle() && inputPage.getContent() != null && inputPage.getDocid() != null){ 
-						context.write(new Text(inputPage.getDocid()), new Text(inputPage.getContent()));				
+						context.write(new Text(inputPage.getDocid()), new Text(inputPage.getRawXML()));				
 					}
 				}	
 			} catch (NullPointerException e){

@@ -29,7 +29,8 @@ public class Tokenizer {
 		int position = 0;
 		Map<String,List<Integer>> positions = new HashMap<String,List<Integer>>();
 		for(String token : split){
-			if(!stopWords.contains(token)){
+			token = token.trim().toLowerCase();
+			if(!stopWords.contains(token) && !token.isEmpty()){
 				if (positions.containsKey(token)){
 					positions.get(token).add(position);
 				} else {

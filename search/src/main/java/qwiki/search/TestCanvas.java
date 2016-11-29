@@ -28,8 +28,7 @@ import qwiki.search.GetArticlesMapred.GetArticlesMapper;
 
 public class TestCanvas {
 	public static class TestMapper extends Mapper<LongWritable, WikipediaPage, Text, StringIntegerList> {
-
-
+		
 		@Override
 		public void map(LongWritable offset, WikipediaPage inputPage, Context context)
 				throws IOException, InterruptedException {
@@ -40,10 +39,9 @@ public class TestCanvas {
 			for(String key : tp.keySet()){
 				int size = tp.get(key).size();
 				int[] pos = convToIntArr(tp.get(key));
-				tp.remove(key); //clear the entry each time; could help with memory use?
 				si.add(new StringInteger(key, size, pos));
 			}
-		
+			tp = null;
 			context.write(new Text(inputPage.getDocid()), new StringIntegerList(si));
 		}
 		
@@ -72,8 +70,8 @@ public class TestCanvas {
 		job.setInputFormatClass(WikipediaPageInputFormat.class);
 		//no shuffling, combining or any sort of reducing occurs
 		job.setNumReduceTasks(0);
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(StringIntegerList.class);
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(StringIntegerList.class);
 		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
 		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
 		System.exit(job.waitForCompletion(true)? 0: 1);	

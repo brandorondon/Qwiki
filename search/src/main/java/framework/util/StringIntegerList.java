@@ -154,7 +154,7 @@ public class StringIntegerList implements Writable {
 			sb.append(",");
 			sb.append(index.getValue());
 			sb.append(",");
-			sb.append(index.getPositions().toString());
+			sb.append(Arrays.toString(index.getPositions()));
 			sb.append(">");
 			if (i != indices.size() - 1) {
 				sb.append(",");
