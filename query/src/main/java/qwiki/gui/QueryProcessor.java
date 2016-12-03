@@ -1,6 +1,7 @@
 package qwiki.gui;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Queue;
 import java.util.LinkedList;
 import java.util.List;
@@ -55,6 +56,58 @@ public class QueryProcessor {
 				sb.append("\n");
 			}
 			return sb.toString();
+		}
+		
+		/*
+		 * Evaluate the expression tree with post order traversal
+		 */
+		public HashMap<String, Integer> evaluateExpressionTree(HashMap<String, HashMap<String, Integer>> invertedIndexMapping) {
+			if (this instanceof BinaryOperatorNode) {
+				BinaryOperatorNode<E> binOpNode = (BinaryOperatorNode<E>) this;
+				// Traverse left
+				HashMap<String, Integer> leftOperandHash = binOpNode.getLeftOperand().evaluateExpressionTree(invertedIndexMapping);
+				// Traverse right
+				HashMap<String, Integer> rightOperandHash = binOpNode.getRightOperand().evaluateExpressionTree(invertedIndexMapping);
+				
+				// Our hashmap of doc_id to frequency pairs for this binary operator is the left operand's hashmap
+				// This is arbitrary (we could have made it right operand's hashmap), but now lets "merge" the left hashmap with right
+				for (String docId : rightOperandHash.keySet()) {
+					Integer rightFrequency = rightOperandHash.get(docId);
+					// If the two hashmaps from the operand node contain the same document, "merge" the values following the semantics of the logical operator
+					// In our case AND -> multiplication, OR -> addition
+					if (leftOperandHash.containsKey(docId)) {
+						Integer leftFrequency = leftOperandHash.get(docId);
+						if (binOpNode.getOperatorAsString().equals("and")) {
+							leftOperandHash.put(docId, (Integer) (leftFrequency * rightFrequency));
+						} else if (binOpNode.getOperatorAsString().equals("or")) {
+							leftOperandHash.put(docId, (Integer) (leftFrequency + rightFrequency));
+						}
+					} else {
+						// Means left and right operands do not have this document_id in common
+						leftOperandHash.put(docId, rightFrequency);
+					}
+				}
+				return leftOperandHash;
+				
+			} else if (this instanceof UnaryOperatorNode) {
+				UnaryOperatorNode<E> unOpNode = (UnaryOperatorNode<E>) this;
+				// Just traverse child since only 1 operand
+				HashMap<String, Integer> operandHash = unOpNode.getOperand().evaluateExpressionTree(invertedIndexMapping);
+
+				for (String docId : operandHash.keySet()) {
+					Integer value = operandHash.get(docId);
+					// For the not operator, negate every frequency value
+					if (unOpNode.getOperatorAsString().equals("not")) 
+						operandHash.put(docId, value * -1);
+				}
+				return operandHash;
+				
+			} else if (this instanceof OperandNode) {
+				OperandNode<E> operandNode = (OperandNode<E>) this;
+				String word = operandNode.getOperandAsString();
+				return invertedIndexMapping.get(word);
+			}
+			return null;
 		}
 	}
 
@@ -151,6 +204,42 @@ public class QueryProcessor {
 		return outputArray;
 	}
 	
+	/*
+	 * Take in array of tokenized query and return list of all keywords in the query
+	 * Basically, it retrieves all operands from the tokenized query (remove logical operators and parens)
+	 */
+	public List<String> getAllWords(String[] tokenizedQuery) {
+		List<String> words = new LinkedList<String>();
+		for (String token : tokenizedQuery) {
+			if (!OPERATORS.contains(token) && !token.equals("(") && !token.equals(")")) {
+				words.add(token);
+			}
+		}
+		return words;
+	}
+	
+	
+	/*
+	 * Take in output from the getAllWords function, and get the corresponding frequency lists from the inverted index
+	 * For example, if we have two words (operands) in our query like [apples, oranges],
+	 * we will return a hash map like {"apples" -> [(doc1, 5), (doc2, 1)], "oranges" -> [(doc4, 2), (doc1, 3)]}
+	 */
+	public HashMap<String, HashMap<String, Integer>> getStringIntegerListPairs(List<String> words) {
+		HashMap<String, HashMap<String, Integer>> allWordsHash = new HashMap<String, HashMap<String, Integer>>();
+		for (String word : words) {
+			allWordsHash.put(word, searchInvertedIndex(word));
+		}
+		return allWordsHash;
+	}
+	
+	/*
+	 * This will retrieve the the value for the word in the inverted index on HDFS
+	 */
+	public HashMap<String, Integer> searchInvertedIndex(String word) {
+		
+		return null;
+	}
+	
 	public ExpressionNode<String> generateParseTree(String[] tokenizedQuery, int startIndex, int endIndex) {
 		int openingParenCount = 0;
 		int closingParenCount = 0;
@@ -210,13 +299,30 @@ public class QueryProcessor {
 	
 	
 	public static void main(String[] args) {
-		String query = "not (this) or ((vanilla or (chocolate and not(strawberry)) or (test and fizzbuzz) and not(hello)))";
-		String query2 = "aidan or (gainor and test)";
+		String query = "(oranges or grapes) and not(apples)";
+		HashMap<String, Integer> applesHM = new HashMap<String, Integer>();
+		applesHM.put("doc1", 5);
+		applesHM.put("doc2", 1);
+		HashMap<String, Integer> orangesHM = new HashMap<String, Integer>();
+		orangesHM.put("doc1", 2);
+		orangesHM.put("doc2", 4);
+		HashMap<String, Integer> grapesHM = new HashMap<String, Integer>();
+		grapesHM.put("doc1", 3);
+		grapesHM.put("doc3", 1);
+		grapesHM.put("doc4", 10);
+		HashMap<String, HashMap<String, Integer>> invertedIndex = new HashMap<String, HashMap<String, Integer>>();
+		invertedIndex.put("apples", applesHM);
+		invertedIndex.put("oranges", orangesHM);
+		invertedIndex.put("grapes", grapesHM);
 		QueryProcessor p = new QueryProcessor();
-		String[] tokens = p.tokenizeQuery(query2);
+		String[] tokens = p.tokenizeQuery(query);
 		ExpressionNode<String> e = p.generateParseTree(tokens);
-		System.out.println(e.toString());
+		HashMap<String, Integer> res = e.evaluateExpressionTree(invertedIndex);
+		
+		for (String key : res.keySet()) {
+			System.out.println("key = " + key + " : value = " + res.get(key));
+			
+		}
+		
 	}
-	
-	
 }
