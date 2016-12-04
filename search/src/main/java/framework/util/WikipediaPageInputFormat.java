@@ -28,7 +28,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import framework.util.XMLInputFormat.XMLRecordReader;
 import edu.umd.cloud9.collection.wikipedia.WikipediaPage;
 import edu.umd.cloud9.collection.wikipedia.language.EnglishWikipediaPage;
-import info.bliki.wiki.filter.ITextConverter;
+import info.bliki.wiki.*;
 
 /**
  * To replace WikipediaPageInputFormat from cloud9 to work with hadoop 2.0

@@ -5,14 +5,14 @@
   <groupId>qwiki</groupId>
   <artifactId>search</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <packaging>jar</packaging>
+  <!-- <packaging>jar</packaging> -->
 
   <name>search</name>
   <url>http://maven.apache.org</url>
 
-  <properties>
+<!--   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
+  </properties> -->
 
   <build>
   	<plugins>
@@ -31,15 +31,48 @@
  	 		<configuration>
   				<finalName>uber-${project.artifactId}-${project.version}</finalName>
   				<minimizeJar>true</minimizeJar>
-	   			<artifactSet>
+  				<filters> 
+  					<filter>
+                       <artifact>xerces:*</artifact>
+                       <excludes>
+                           <exclude>**</exclude>
+                       </excludes>
+                    </filter> 
+                    <filter>
+                       <artifact>edu.umd:cloud9</artifact>
+                       <includes>
+                           <include>**</include>
+                       </includes>
+                    </filter> 
+                    <filter>
+                       <artifact>edu.stanford.nlp:*</artifact>
+                       <includes>
+                           <include>**</include>
+                       </includes>
+                    </filter>      
+                    <filter>
+                       <artifact>info.bliki.wiki:bliki-core</artifact>
+                       <includes>
+                           <include>**</include>
+                       </includes>
+                    </filter>
+                     <filter>
+                       <artifact>xalan:*</artifact>
+                       <excludes>
+                           <exclude>**</exclude>
+                       </excludes>
+                    </filter>                     
+                </filters>
+	   			<!-- <artifactSet>
 					<includes>
 						<include> edu.umd:cloud9 </include>
-						<!-- <include> edu.stanford.nlp:* </include> -->
+						<include> edu.stanford.nlp:* </include> 
+						<include> info.bliki.wiki:bliki-core </include>
 					</includes>
-					<!-- <excludes>
+					<excludes>
 						<exclude>*:*</exclude>
-					</excludes> -->
-				</artifactSet>
+					</excludes>
+				</artifactSet> -->
 
   			</configuration>
   		</plugin>
@@ -67,7 +100,13 @@
   	<dependency>
     	<groupId>edu.umd</groupId>
     	<artifactId>cloud9</artifactId>
-    	<version>1.4.13</version>
+    	<version>2.0.0</version>
+	</dependency>
+	<!-- https://mvnrepository.com/artifact/commons-lang/commons-lang -->
+	<dependency>
+    	<groupId>commons-lang</groupId>
+   		 <artifactId>commons-lang</artifactId>
+   		 <version>2.6</version>
 	</dependency>
   	<dependency>
   		<groupId>org.apache.hadoop</groupId>
@@ -80,5 +119,20 @@
     	<artifactId>bliki-core</artifactId>
     	<version>3.0.19</version>
 	</dependency>
+	<dependency>
+   		<groupId>xerces</groupId>
+   		<artifactId>xercesImpl</artifactId>
+   		<version>2.4.0</version>
+   		<optional>true</optional>
+	</dependency>
+	<!-- https://mvnrepository.com/artifact/xalan/xalan -->
+	<dependency>
+    	<groupId>xalan</groupId>
+    	<artifactId>xalan</artifactId>
+    	<version>2.7.1</version>
+     	<optional>true</optional>   	
+ 	</dependency>
+	
+	
   </dependencies>
 </project>

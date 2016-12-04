@@ -13,7 +13,7 @@ import framework.util.StringIntegerList.StringInteger;
 
 public class Tokenizer {
 	private static Set<String> stopWords = new HashSet<String>();
-	private static String regex = "[^a-zA-Z.]"; //keep periods to maintain sentence boundaries for the Stanford CoreNLP lemmatizer 
+	private static String regex = "[^a-zA-Z]"; //keep periods to maintain sentence boundaries for the Stanford CoreNLP lemmatizer 
 	
 	public Tokenizer() {
 		// TODO Auto-generated constructor stub
@@ -22,15 +22,14 @@ public class Tokenizer {
 			stopWords.add(word);
 		}
 	}
-
+	//heuristic to consider: add more weight to a word's score if the document contains the word in the title
 	public Map<String, List<Integer>> tokenize(String sentence) {
 		String[] split = sentence.split(regex);
-		//List<StringInteger> positions = new LinkedList<StringInteger>();
 		int position = 0;
 		Map<String,List<Integer>> positions = new HashMap<String,List<Integer>>();
 		for(String token : split){
-			token = token.trim().toLowerCase();
-			if(!stopWords.contains(token) && !token.isEmpty()){
+			token = token.trim().toLowerCase(); //TODO: should i?
+			if(!stopWords.contains(token) && token.length() > 2){
 				if (positions.containsKey(token)){
 					positions.get(token).add(position);
 				} else {
@@ -43,4 +42,15 @@ public class Tokenizer {
 		}
 		return positions;
 	}
+	
+	public String cleanDoc(String doc){
+		StringBuilder sb = new StringBuilder();
+		String[] split = doc.split(regex);
+		for(String s: split){
+			sb.append(" " + s.trim().toLowerCase());
+		}
+		return sb.toString();
+	}
+	
+	
 }
