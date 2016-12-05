@@ -43,16 +43,21 @@ public class CreateMapFile {
 			try {
 				writer = new Writer(conf, fs, outputFile.toString(), Text.class, Text.class);
 				writer.setIndexInterval(1);
+				int count = 0;
 				while (inputStream.available() > 0) {
 					line = inputStream.readLine().trim();
-					int comma = line.indexOf(",");
+					//TODO: remember changes made here to make it covnert the inverted index to map file form
+					int comma = line.indexOf("<");
 					String k = line.substring(0, comma).trim();
-					String v = line.substring(comma+1).trim();
+					String v = line.substring(comma).trim();
 					if(!k.isEmpty()){
 						key.set(k);
 						value.set(v);
-						System.out.println("appending: " + key + " -> " + value );
-						writer.append(key, value);						
+						writer.append(key, value);
+						count++;
+						if(count%100000==0){
+							System.out.println("appending: " + key + " -> " + value );
+						}
 					}
 				}
 			} finally {

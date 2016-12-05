@@ -1,4 +1,4 @@
-package framework.util;
+package qwiki.gui;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -101,7 +101,7 @@ public class StringIntegerList implements Writable {
 	}
 	//TODO: make changes to SIL to support the new positions array in StringInteger
 	private List<StringInteger> indices;
-	//private Map<String, Integer> indiceMap;
+	private Map<String, Integer> freqMap;
 	private Pattern p = Pattern.compile("<([^>]+),(\\d+),\\[(.*?)\\]>");
 
 	public StringIntegerList() {
@@ -130,6 +130,16 @@ public class StringIntegerList implements Writable {
 //		}
 //		return indiceMap;
 //	}
+	
+	public Map<String, Integer> getFreqMap(){
+		if (this.freqMap == null){
+			this.freqMap = new HashMap<String, Integer>();
+			for(StringInteger index : this.indices){
+				this.freqMap.put(index.s, index.t);
+			}
+		}
+		return this.freqMap;
+	}
 
 	public void readFields(DataInput arg0) throws IOException {
 		String indicesStr = WritableUtils.readCompressedString(arg0);

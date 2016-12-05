@@ -1,15 +1,22 @@
 package qwiki.gui;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Queue;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import qwiki.gui.StringIntegerList.StringInteger;
 
 public class QueryProcessor {
-
+	private MapFileReader hdfsReader = new MapFileReader();
+	private final String lemmaPath = "wordToLemMap";
+	private final String docPath = "inv-wiki-map";
+	
 	public final static List<String> OPERATORS = Arrays.asList("and", "or", "not");
 	Pattern p = Pattern.compile("[\\(\\)\\p{L}]+");
 	
@@ -58,6 +65,47 @@ public class QueryProcessor {
 			return sb.toString();
 		}
 		
+		private class DocAndFreq implements Comparable{
+			private String docId;
+			private Integer freq;
+			public DocAndFreq(String docId, Integer freq){
+				this.docId = docId;
+				this.freq = freq;
+			}
+			
+			public int compareTo(Object o){
+				DocAndFreq other = (DocAndFreq) o;		
+				if(other.getFreq() > this.freq){
+					return 1;
+				} else if (other.getFreq() < this.freq){
+					return -1;
+				} else 
+					return 0;
+			}
+			
+			public String getDocId(){
+				return this.docId;
+			}
+			
+			public Integer getFreq(){
+				return this.freq;
+			}
+		}
+		
+		private List<String> sortDocMap(HashMap<String, Integer> map){
+			List<String> sortedDocs = new ArrayList<String>();
+			List<DocAndFreq> l = new ArrayList<DocAndFreq>();
+			for(String key : map.keySet()){
+				l.add(new DocAndFreq(key, map.get(key)));
+			}
+			Collections.sort(l);
+			for(DocAndFreq df :l){
+				sortedDocs.add(df.getDocId());
+			}
+			return sortedDocs;
+		}
+		
+		//TODO:
 		/*
 		 * Evaluate the expression tree with post order traversal
 		 */
@@ -224,7 +272,7 @@ public class QueryProcessor {
 	 * For example, if we have two words (operands) in our query like [apples, oranges],
 	 * we will return a hash map like {"apples" -> [(doc1, 5), (doc2, 1)], "oranges" -> [(doc4, 2), (doc1, 3)]}
 	 */
-	public HashMap<String, HashMap<String, Integer>> getStringIntegerListPairs(List<String> words) {
+	public HashMap<String, HashMap<String, Integer>> getStringIntegerListPairs(List<String> words) throws IOException {
 		HashMap<String, HashMap<String, Integer>> allWordsHash = new HashMap<String, HashMap<String, Integer>>();
 		for (String word : words) {
 			allWordsHash.put(word, searchInvertedIndex(word));
@@ -232,12 +280,13 @@ public class QueryProcessor {
 		return allWordsHash;
 	}
 	
-	/*
+	/* TODO:
 	 * This will retrieve the the value for the word in the inverted index on HDFS
 	 */
-	public HashMap<String, Integer> searchInvertedIndex(String word) {
-		
-		return null;
+	public HashMap<String, Integer> searchInvertedIndex(String word) throws IOException {
+		StringIntegerList sil = new StringIntegerList();
+		sil.readFromString(hdfsReader.getValue(word, this.docPath));
+		return (HashMap) sil.getFreqMap();
 	}
 	
 	public ExpressionNode<String> generateParseTree(String[] tokenizedQuery, int startIndex, int endIndex) {

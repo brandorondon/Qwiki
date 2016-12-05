@@ -59,7 +59,8 @@ public class LemmaIndexJob {
 		StringBuilder buffer = new StringBuilder();
 		String dir;
 
-		
+		//We write each word->lemma to an hdfs file, so we can then convert into a MapFile
+		//for our query processor 
 		protected void setup(Context context) throws IOException, InterruptedException {
 			this.props.put("annotators", "tokenize, ssplit, pos, lemma");
 			this.pipeline = new StanfordCoreNLP(props);
@@ -146,10 +147,8 @@ public class LemmaIndexJob {
 
 	        List<CoreMap> sentences = document.get(SentencesAnnotation.class);
 	        for(CoreMap sentence: sentences) {
-	            // Iterate over all tokens in a sentence
 	            for (CoreLabel token: sentence.get(TokensAnnotation.class)) {
-	                // Retrieve and add the lemma for each word into the
-	                // list of lemmas
+	               //only valid lemmas
 	               String lem = token.get(LemmaAnnotation.class).toLowerCase();
 	               String ts = token.originalText().toLowerCase();
 	               if (!lem.equals("null") || ts.contains("null") ){ 
@@ -161,12 +160,9 @@ public class LemmaIndexJob {
 		}
 	}
 	
-	//main method not needed if we will be chaining the jobs
 	public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException, URISyntaxException {
-		// TODO: you should implement the Job Configuration and Job call
-		// here
+		
 		Configuration conf = new Configuration();
-		//assuming we have people.txt at the hdfs root 
 		String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
 		if (otherArgs.length != 2){
 			System.err.println("Usage: <jar> <in> <out>");		
@@ -176,7 +172,6 @@ public class LemmaIndexJob {
 		job.setJarByClass(LemmaIndexMapper.class);
 		job.setMapperClass(LemmaIndexMapper.class); 
 		job.setInputFormatClass(WikipediaPageInputFormat.class);
-		//no shuffling, combining or any sort of reducing occurs
 		job.setNumReduceTasks(0);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(StringIntegerList.class);

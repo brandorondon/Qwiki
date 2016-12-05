@@ -28,6 +28,7 @@ import qwiki.search.InvertIndexJob.InvertedIndexMapper;
 import qwiki.search.InvertIndexJob.InvertedIndexReducer;
 import framework.util.StringIntegerList;
 import framework.util.StringIntegerList.StringInteger;
+import framework.util.MapFileReader;
 
 public class TestCanvas {
 
@@ -75,26 +76,28 @@ public class TestCanvas {
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
 		
-		System.out.println("****** INVERTING INDEX *******");
-		Configuration conf = new Configuration();
-		String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-
-		Job job = Job.getInstance(conf);
-		job.setJobName("Invert Index");
-		job.setJarByClass(TestCanvas.class);
-		job.setMapperClass(InvertedIndexMapper.class); 
-		job.setReducerClass(InvertedIndexReducer.class);
-
-		job.setInputFormatClass(TextInputFormat.class);
-		//conf.set("mapreduce.input.keyvaluelinerecordreader.key.value.separator","\t");
-		job.setMapOutputValueClass(StringInteger.class);
-		job.setMapOutputKeyClass(Text.class);
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(StringIntegerList.class);
-		//job.getConfiguration().set("mapreduce.job.queuename", "hadoop07");
-		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
-		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
-		System.exit(job.waitForCompletion(true)? 0: 1);
+//		System.out.println("****** INVERTING INDEX *******");
+//		Configuration conf = new Configuration();
+//		String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+//
+//		Job job = Job.getInstance(conf);
+//		job.setJobName("Invert Index");
+//		job.setJarByClass(TestCanvas.class);
+//		job.setMapperClass(InvertedIndexMapper.class); 
+//		job.setReducerClass(InvertedIndexReducer.class);
+//
+//		job.setInputFormatClass(TextInputFormat.class);
+//		//conf.set("mapreduce.input.keyvaluelinerecordreader.key.value.separator","\t");
+//		job.setMapOutputValueClass(StringInteger.class);
+//		job.setMapOutputKeyClass(Text.class);
+//		job.setOutputKeyClass(Text.class);
+//		job.setOutputValueClass(StringIntegerList.class);
+//		//job.getConfiguration().set("mapreduce.job.queuename", "hadoop07");
+//		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+//		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+//		System.exit(job.waitForCompletion(true)? 0: 1);
+		MapFileReader mr = new MapFileReader();
+		System.out.println(mr.getValue(args[0], "inv-wiki-map"));
 		
 	}
 
