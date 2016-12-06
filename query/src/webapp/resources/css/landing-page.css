@@ -35,7 +35,7 @@ h6 {
     padding-bottom: 50px;
     text-align: center;
     color: #f8f8f8;
-    background: url(../img/digital-book.jpg) no-repeat center center;
+    background: url(../img/qwiki.png) no-repeat center center;
     background-size: cover;
 }
 
@@ -192,5 +192,5 @@ p.copyright {
 
 #results {
 	overflow-y:auto;
-	max-height:800px;
+	max-height:700px;
 }

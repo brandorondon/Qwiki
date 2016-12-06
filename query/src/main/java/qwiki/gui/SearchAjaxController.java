@@ -2,6 +2,7 @@ package qwiki.gui;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,13 +19,10 @@ import edu.umd.cloud9.collection.wikipedia.WikipediaPage;
 public class SearchAjaxController {
     @JsonView(Views.Public.class)
     @RequestMapping(value = "/get_all_matching_articles")
-    public SearchResult processAJAXRequest(@RequestBody String query) {
-    	
+    public SearchResult processAJAXRequest(@RequestBody String query) throws IOException {
+    	QueryProcessor p = new QueryProcessor();
     	SearchResult sr = new SearchResult();
-    	sr.result = new ArrayList<String>();
-    	for (int i = 1; i < 22; i++) {
-    		sr.result.add("doc" + i);
-    	}
+    	sr.result = p.evaluateQuery(query);
     	return sr;
     }
     
@@ -44,12 +42,12 @@ public class SearchAjaxController {
     		wr.articleID = articleID;
     		String content = page.getContent();
     		int sampleSize;
-    		if (content.length() > 100) {
-    			sampleSize = 100;
+    		if (content.length() > 500) {
+    			sampleSize = 500;
     		} else {
     			sampleSize = content.length()-1;
     		}
-    		wr.contentSample = content.substring(0, sampleSize);
+    		wr.contentSample = content.substring(0, sampleSize) + "...";
     		wlr.result.add(wr);
     	}
     	return wlr;

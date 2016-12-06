@@ -363,7 +363,7 @@ public class QueryProcessor {
 	
 	
 	public static void main(String[] args) throws IOException {
-		String query = "obama and clinton";
+		String query = "japan and germany and france";
 		QueryProcessor p = new QueryProcessor();
 		/*
 		HashMap<String, Integer> applesHM = new HashMap<String, Integer>();
