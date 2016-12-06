@@ -13,12 +13,16 @@ import java.util.regex.Pattern;
 import qwiki.gui.StringIntegerList.StringInteger;
 
 public class QueryProcessor {
-	private MapFileReader hdfsReader = new MapFileReader();
+	private MapFileReader hdfsReader;
 	private final String lemmaPath = "wordToLemMap";
 	private final String docPath = "inv-wiki-map";
 	
 	public final static List<String> OPERATORS = Arrays.asList("and", "or", "not");
 	Pattern p = Pattern.compile("[\\(\\)\\p{L}]+");
+	
+	public QueryProcessor() throws IOException {
+		hdfsReader = new MapFileReader();
+	}
 	
 	public class ExpressionNode<E> {
 		// Value = either query string operand or the action of operation, like AND
@@ -63,46 +67,6 @@ public class QueryProcessor {
 				sb.append("\n");
 			}
 			return sb.toString();
-		}
-		
-		private class DocAndFreq implements Comparable{
-			private String docId;
-			private Integer freq;
-			public DocAndFreq(String docId, Integer freq){
-				this.docId = docId;
-				this.freq = freq;
-			}
-			
-			public int compareTo(Object o){
-				DocAndFreq other = (DocAndFreq) o;		
-				if(other.getFreq() > this.freq){
-					return 1;
-				} else if (other.getFreq() < this.freq){
-					return -1;
-				} else 
-					return 0;
-			}
-			
-			public String getDocId(){
-				return this.docId;
-			}
-			
-			public Integer getFreq(){
-				return this.freq;
-			}
-		}
-		
-		private List<String> sortDocMap(HashMap<String, Integer> map){
-			List<String> sortedDocs = new ArrayList<String>();
-			List<DocAndFreq> l = new ArrayList<DocAndFreq>();
-			for(String key : map.keySet()){
-				l.add(new DocAndFreq(key, map.get(key)));
-			}
-			Collections.sort(l);
-			for(DocAndFreq df :l){
-				sortedDocs.add(df.getDocId());
-			}
-			return sortedDocs;
 		}
 		
 		//TODO:
@@ -285,7 +249,7 @@ public class QueryProcessor {
 	 */
 	public HashMap<String, Integer> searchInvertedIndex(String word) throws IOException {
 		StringIntegerList sil = new StringIntegerList();
-		sil.readFromString(hdfsReader.getValue(word, this.docPath));
+		sil.readFromString(hdfsReader.getValue(word));
 		return (HashMap) sil.getFreqMap();
 	}
 	
@@ -346,9 +310,62 @@ public class QueryProcessor {
 		return generateParseTree(tokenizedQuery, 0, tokenizedQuery.length-1);
 	}
 	
+	private class DocAndFreq implements Comparable{
+		private String docId;
+		private Integer freq;
+		public DocAndFreq(String docId, Integer freq){
+			this.docId = docId;
+			this.freq = freq;
+		}
+		
+		public int compareTo(Object o){
+			DocAndFreq other = (DocAndFreq) o;		
+			if(other.getFreq() > this.freq){
+				return 1;
+			} else if (other.getFreq() < this.freq){
+				return -1;
+			} else 
+				return 0;
+		}
+		
+		public String getDocId(){
+			return this.docId;
+		}
+		
+		public Integer getFreq(){
+			return this.freq;
+		}
+	}
 	
-	public static void main(String[] args) {
-		String query = "(oranges or grapes) and not(apples)";
+	private List<String> sortDocMap(HashMap<String, Integer> map){
+		List<String> sortedDocs = new ArrayList<String>();
+		List<DocAndFreq> l = new ArrayList<DocAndFreq>();
+		for(String key : map.keySet()){
+			l.add(new DocAndFreq(key, map.get(key)));
+		}
+		Collections.sort(l);
+		for(DocAndFreq df :l){
+			sortedDocs.add(df.getDocId());
+		}
+		return sortedDocs;
+	}
+	
+	public List<String> evaluateQuery(String query) throws IOException {
+		String[] tokens = tokenizeQuery(query);
+		ExpressionNode<String> e = generateParseTree(tokens);
+		List<String> words = getAllWords(tokens);
+		HashMap<String, HashMap<String, Integer>> invertedIndexSegment = getStringIntegerListPairs(words);
+		HashMap<String, Integer> evaluationResult = e.evaluateExpressionTree(invertedIndexSegment);
+		//System.out.println(evaluationResult.get("616274"));
+		List<String> topSearchResults = sortDocMap(evaluationResult);
+		return topSearchResults;
+	}
+	
+	
+	public static void main(String[] args) throws IOException {
+		String query = "obama and clinton";
+		QueryProcessor p = new QueryProcessor();
+		/*
 		HashMap<String, Integer> applesHM = new HashMap<String, Integer>();
 		applesHM.put("doc1", 5);
 		applesHM.put("doc2", 1);
@@ -372,6 +389,9 @@ public class QueryProcessor {
 			System.out.println("key = " + key + " : value = " + res.get(key));
 			
 		}
+		*/
+		List<String> results = p.evaluateQuery(query);
+		System.out.println(results.get(0));
 		
 	}
 }

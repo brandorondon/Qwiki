@@ -13,37 +13,25 @@ public class MapFileReader {
 	private String docPath;
 	private Configuration conf;
 	private FileSystem fs;
-
+	
+	static String coreSitePath = "C:\\Users\\Aidan\\Desktop\\hadoop-2.3.0\\etc\\hadoop\\core-site.xml";
+	static String hdfsSitePath = "C:\\Users\\Aidan\\Desktop\\hadoop-2.3.0\\etc\\hadoop\\hdfs-site.xml";
+	MapFile.Reader reader;
 	
 	
-	public MapFileReader(){
+	public MapFileReader() throws IOException {
 		this.lemmaPath = "wordToLemMap";
-		this.docPath = null; //need to build forward index
+		this.docPath = "inv-wiki-map";
 		this.conf = new Configuration();
-
-		try {
-			this.fs = FileSystem.get(conf);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-		} 
+		this.fs = FileSystem.get(conf);
+		conf.addResource(new Path(coreSitePath));
+		conf.addResource(new Path(hdfsSitePath));
+		reader = new MapFile.Reader(fs, docPath , conf);
 	}
 	
-	public String getValue(String word, String path) throws IOException{
-		MapFile.Reader reader = null;
+	public String getValue(String word) throws IOException{
 		Text result = new Text();
-		try {
-			reader = new MapFile.Reader(fs, path , conf);
-			reader.get(new Text(word), result);
-			
-		} catch (IOException e) {
-			e.printStackTrace();
-		} finally {
-			if (reader!=null){
-				reader.close();
-			}
-		}
-		
+		reader.get(new Text(word), result);
 		return result.toString();
 	}
 }

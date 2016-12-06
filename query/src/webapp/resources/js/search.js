@@ -48,7 +48,7 @@ $(document).ready(function() {
 	    if (5 > diff && diff > -5) {
 			var articles = retrieveArticleIDs();
 			if (articles.length > 0) {
-				retriveArticlesAjax();
+				retrieveArticlesAjax();
 			}
 	    }
 	});
@@ -68,7 +68,7 @@ $(document).ready(function() {
 			success: function(json) {
 				window["searchResults"] = json.result;
 				window["numArticlesRetrieved"] = 0;
-				retriveArticlesAjax();
+				retrieveArticlesAjax();
 			},
 			error : function(e) {
 				console.log("ERROR: ", e);

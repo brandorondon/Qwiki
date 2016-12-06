@@ -22,7 +22,7 @@ public class SearchAjaxController {
     	
     	SearchResult sr = new SearchResult();
     	sr.result = new ArrayList<String>();
-    	for (int i = 0; i < 22; i++) {
+    	for (int i = 1; i < 22; i++) {
     		sr.result.add("doc" + i);
     	}
     	return sr;
@@ -34,7 +34,7 @@ public class SearchAjaxController {
     		throws IllegalArgumentException, IOException {
     	
     	ArticleFetcher fetcher = new ArticleFetcher();
-    	String[] articleIDs = articles.split("**sep**");
+    	String[] articleIDs = articles.split(",");
     	WikipediaListResult wlr = new WikipediaListResult();
     	wlr.result = new ArrayList<WikipediaResult>();
     	for (String articleID : articleIDs) {
