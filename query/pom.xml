@@ -136,12 +136,12 @@
                     <version>2.4</version>
                     <configuration>
                         <warSourceDirectory>src/webapp</warSourceDirectory>
-                        <warName>Spring4MVCHelloWorldNoXMLDemo</warName>
+                        <warName>Qwiki</warName>
                         <failOnMissingWebXml>false</failOnMissingWebXml>
                     </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
-        <finalName>Spring4MVCHelloWorldNoXMLDemo</finalName>
+        <finalName>Qwiki</finalName>
     </build>
 </project>
