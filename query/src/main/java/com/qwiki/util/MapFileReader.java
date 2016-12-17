@@ -1,4 +1,4 @@
-package qwiki.gui;
+package com.qwiki.util;
 
 import java.io.IOException;
 

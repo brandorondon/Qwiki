@@ -1,11 +1,12 @@
-package qwiki.gui;
+package com.qwiki.web.model;
 
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import com.qwiki.web.jsonview.Views;
 
 
 public class WikipediaListResult {
 	@JsonView(Views.Public.class)
-	List<WikipediaResult> result;
+	public List<WikipediaResult> result;
 }

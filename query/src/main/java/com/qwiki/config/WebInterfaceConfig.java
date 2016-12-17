@@ -1,4 +1,4 @@
-package qwiki.gui;
+package com.qwiki.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -12,7 +12,7 @@ import org.springframework.web.servlet.view.JstlView;
 
 @Configuration
 @EnableWebMvc
-@ComponentScan(basePackages = "qwiki.gui")
+@ComponentScan(basePackages = "com.qwiki.web")
 public class WebInterfaceConfig extends WebMvcConfigurerAdapter {
     @Bean
     public ViewResolver viewResolver() {

@@ -1,15 +1,16 @@
-package qwiki.gui;
+package com.qwiki.web.model;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import com.qwiki.web.jsonview.Views;
 
 public class WikipediaResult {
 
 	@JsonView(Views.Public.class)
-	String contentSample;
+	public String contentSample;
 	
 	@JsonView(Views.Public.class)
-	String articleTitle;
+	public String articleTitle;
 	
 	@JsonView(Views.Public.class)
-	String articleID;
+	public String articleID;
 }

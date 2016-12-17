@@ -1,7 +1,9 @@
-package qwiki.gui;
+package com.qwiki.servlet3;
  
 
 import org.springframework.web.servlet.support.AbstractAnnotationConfigDispatcherServletInitializer;
+
+import com.qwiki.config.WebInterfaceConfig;
  
 public class WebInterfaceInit extends AbstractAnnotationConfigDispatcherServletInitializer {
  

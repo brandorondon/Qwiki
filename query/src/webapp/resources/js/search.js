@@ -3,6 +3,7 @@ $(document).ready(function() {
 	var resBox = $("#results");
 	var searchButton = $("#search-button");
 	var queryTextBox = $("#query-input-box");
+	var doHover = true;
 	
 	function retrieveArticleIDs() {
 		var articlesToRetrieve = [];
@@ -44,6 +45,13 @@ $(document).ready(function() {
 				data : arrayToString(articles),
 				success: function(json) {
 					$("#results").append(jsonToHTML(json));
+					
+					if (doHover) {
+						$('html, body').animate({
+							scrollTop: resBox.offset().top 
+							}, 1000);
+						doHover = false;
+					}
 				}
 			});
 			
@@ -66,6 +74,7 @@ $(document).ready(function() {
 	});
 	
 	searchButton.click(function(event) {
+		doHover = true;
 		event.preventDefault();
 		var queryString = queryTextBox.val();
 		$.ajax({
@@ -75,6 +84,7 @@ $(document).ready(function() {
 			data : queryString,
 			dataType: 'json',
 			success: function(json) {
+				
 				window["allowInfiniteSearch"] = false;
 				$("#results").html("");
 				window["searchResults"] = json.result;

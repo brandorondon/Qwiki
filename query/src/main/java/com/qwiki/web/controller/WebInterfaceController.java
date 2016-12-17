@@ -1,4 +1,4 @@
-package qwiki.gui;
+package com.qwiki.web.controller;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import com.qwiki.util.ArticleFetcher;
 
 import edu.umd.cloud9.collection.wikipedia.WikipediaPage;
 
