@@ -77,30 +77,33 @@ public class QueryProcessor {
 		/*
 		 * Evaluate the expression tree with post order traversal
 		 */
-		public HashMap<String, Integer> evaluateExpressionTree(HashMap<String, HashMap<String, Integer>> invertedIndexMapping) {
+		public HashMap<String, IntArrayPair> evaluateExpressionTree(HashMap<String, HashMap<String, IntArrayPair>> invertedIndexMapping) {
 			if (this instanceof BinaryOperatorNode) {
 				BinaryOperatorNode<E> binOpNode = (BinaryOperatorNode<E>) this;
 				// Traverse left
-				HashMap<String, Integer> leftOperandHash = binOpNode.getLeftOperand().evaluateExpressionTree(invertedIndexMapping);
+				HashMap<String, IntArrayPair> leftOperandHash = binOpNode.getLeftOperand().evaluateExpressionTree(invertedIndexMapping);
 				// Traverse right
-				HashMap<String, Integer> rightOperandHash = binOpNode.getRightOperand().evaluateExpressionTree(invertedIndexMapping);
+				HashMap<String, IntArrayPair> rightOperandHash = binOpNode.getRightOperand().evaluateExpressionTree(invertedIndexMapping);
 				
 				// Our hashmap of doc_id to frequency pairs for this binary operator is the left operand's hashmap
 				// This is arbitrary (we could have made it right operand's hashmap), but now lets "merge" the left hashmap with right
 				for (String docId : rightOperandHash.keySet()) {
-					Integer rightFrequency = rightOperandHash.get(docId);
+					IntArrayPair rightValue = rightOperandHash.get(docId);
+					int rightFrequency = rightValue.frequency;
 					// If the two hashmaps from the operand node contain the same document, "merge" the values following the semantics of the logical operator
 					// In our case AND -> multiplication, OR -> addition
 					if (leftOperandHash.containsKey(docId)) {
-						Integer leftFrequency = leftOperandHash.get(docId);
+						IntArrayPair leftValue = leftOperandHash.get(docId);
+						int leftFrequency = leftValue.frequency;
+						int[] mergedTokenPositions = mergeArrays(leftValue.posArray, rightValue.posArray);
 						if (binOpNode.getOperatorAsString().equals("and")) {
-							leftOperandHash.put(docId, (Integer) (leftFrequency * rightFrequency));
+							leftOperandHash.put(docId, new IntArrayPair(leftFrequency * rightFrequency, mergedTokenPositions));
 						} else if (binOpNode.getOperatorAsString().equals("or")) {
-							leftOperandHash.put(docId, (Integer) (leftFrequency + rightFrequency));
+							leftOperandHash.put(docId, new IntArrayPair(leftFrequency + rightFrequency, mergedTokenPositions));
 						}
 					} else {
 						// Means left and right operands do not have this document_id in common
-						leftOperandHash.put(docId, rightFrequency);
+						leftOperandHash.put(docId, new IntArrayPair(rightFrequency, rightValue.posArray));
 					}
 				}
 				return leftOperandHash;
@@ -108,20 +111,22 @@ public class QueryProcessor {
 			} else if (this instanceof UnaryOperatorNode) {
 				UnaryOperatorNode<E> unOpNode = (UnaryOperatorNode<E>) this;
 				// Just traverse child since only 1 operand
-				HashMap<String, Integer> operandHash = unOpNode.getOperand().evaluateExpressionTree(invertedIndexMapping);
+				HashMap<String, IntArrayPair> operandHash = unOpNode.getOperand().evaluateExpressionTree(invertedIndexMapping);
 
 				for (String docId : operandHash.keySet()) {
-					Integer value = operandHash.get(docId);
+					IntArrayPair value = operandHash.get(docId);
+					int frequency = value.frequency;
 					// For the not operator, negate every frequency value
 					if (unOpNode.getOperatorAsString().equals("not")) 
-						operandHash.put(docId, value * -1);
+						operandHash.put(docId, new IntArrayPair(frequency * -1, new int[] {}));
 				}
 				return operandHash;
 				
 			} else if (this instanceof OperandNode) {
 				OperandNode<E> operandNode = (OperandNode<E>) this;
 				String word = operandNode.getOperandAsString();
-				return invertedIndexMapping.get(word);
+				HashMap<String, IntArrayPair> mapping = invertedIndexMapping.get(word);
+				return mapping;
 				
 			} else if (this instanceof N_aryOperatorNode) {
 				N_aryOperatorNode<E> n_aryNode = (N_aryOperatorNode<E>) this;
@@ -130,7 +135,7 @@ public class QueryProcessor {
 				if (operator.equals("pand")) {
 					for (OperandNode<E> operand : n_aryNode.getChildren()) {
 						String word = operand.getOperandAsString();
-						HashMap<String, Integer> mapping = invertedIndexMapping.get(word);
+						HashMap<String, IntArrayPair> mapping = invertedIndexMapping.get(word);
 						
 					}
 				}
@@ -293,22 +298,25 @@ public class QueryProcessor {
 	 * Take in output from the getAllWords function, and get the corresponding frequency lists from the inverted index
 	 * For example, if we have two words (operands) in our query like [apples, oranges],
 	 * we will return a hash map like {"apples" -> [(doc1, 5), (doc2, 1)], "oranges" -> [(doc4, 2), (doc1, 3)]}
+	 * 
+	 * UPDATE!!!: Now we take in indices from document for search highlighting, and just get indices array length for the frequency value
 	 */
-	public HashMap<String, HashMap<String, Integer>> getStringIntegerListPairs(List<String> words) throws IOException {
-		HashMap<String, HashMap<String, Integer>> allWordsHash = new HashMap<String, HashMap<String, Integer>>();
+	public HashMap<String, HashMap<String, IntArrayPair>> getStringIntegerListPairs(List<String> words) throws IOException {
+		HashMap<String, HashMap<String, IntArrayPair>> allWordsHash = new HashMap<String, HashMap<String, IntArrayPair>>();
 		for (String word : words) {
 			allWordsHash.put(word, searchInvertedIndex(word));
 		}
 		return allWordsHash;
 	}
 	
-	/* TODO:
+	/*
 	 * This will retrieve the the value for the word in the inverted index on HDFS
+	 * It is a hashmap of doc_id -> array of indices of token in doc + frequency value
 	 */
-	public HashMap<String, Integer> searchInvertedIndex(String word) throws IOException {
+	public HashMap<String, IntArrayPair> searchInvertedIndex(String word) throws IOException {
 		StringIntegerList sil = new StringIntegerList();
 		sil.readFromString(hdfsReader.getValue(word));
-		return (HashMap) sil.getFreqMap();
+		return (HashMap<String, IntArrayPair>) sil.getFreqMap();
 	}
 	
 	public ExpressionNode<String> generateParseTree(String[] tokenizedQuery, int startIndex, int endIndex) {
@@ -345,7 +353,7 @@ public class QueryProcessor {
 		} 
 		
 		// a phrase search syntax is surrounded by quotations
-		if (operatorIndex == -1 || (tokenizedQuery[startIndex].equals("\"") && tokenizedQuery[endIndex].equals("\""))) {
+		if (tokenizedQuery[startIndex].equals("\"") && tokenizedQuery[endIndex].equals("\"")) {
 			List<OperandNode<String>> phraseList = new LinkedList<OperandNode<String>>();
 			for (int tokenInPhraseIndex = startIndex + 1; tokenInPhraseIndex < endIndex-1; tokenInPhraseIndex++) {
 				phraseList.add(new OperandNode<String>(tokenizedQuery[tokenInPhraseIndex]));
@@ -380,54 +388,26 @@ public class QueryProcessor {
 		return generateParseTree(tokenizedQuery, 0, tokenizedQuery.length-1);
 	}
 	
-	private class DocAndFreq implements Comparable {
-		private String docId;
-		private Integer freq;
-		public DocAndFreq(String docId, Integer freq){
-			this.docId = docId;
-			this.freq = freq;
-		}
-		
-		public int compareTo(Object o){
-			DocAndFreq other = (DocAndFreq) o;		
-			if(other.getFreq() > this.freq){
-				return 1;
-			} else if (other.getFreq() < this.freq){
-				return -1;
-			} else 
-				return 0;
-		}
-		
-		public String getDocId(){
-			return this.docId;
-		}
-		
-		public Integer getFreq(){
-			return this.freq;
-		}
-	}
-	
-	private List<String> sortDocMap(HashMap<String, Integer> map){
-		List<String> sortedDocs = new ArrayList<String>();
+	private List<DocAndFreq> sortDocMap(HashMap<String, IntArrayPair> map){
 		List<DocAndFreq> l = new ArrayList<DocAndFreq>();
 		for(String key : map.keySet()){
-			l.add(new DocAndFreq(key, map.get(key)));
+			IntArrayPair pair = map.get(key);
+			System.out.println(Arrays.toString(pair.posArray));
+			int[] sampleBounds = getRangeOfAreaToHighlight(pair.posArray);
+			l.add(new DocAndFreq(key, pair.frequency, sampleBounds));
 		}
 		Collections.sort(l);
-		for(DocAndFreq df :l){
-			sortedDocs.add(df.getDocId());
-		}
-		return sortedDocs;
+		return l;
 	}
 	
-	public List<String> evaluateQuery(String query) throws IOException {
+	public List<DocAndFreq> evaluateQuery(String query) throws IOException {
 		String[] tokens = tokenizeQuery(query);
 		ExpressionNode<String> e = generateParseTree(tokens);
 		List<String> words = getAllWords(tokens);
-		HashMap<String, HashMap<String, Integer>> invertedIndexSegment = getStringIntegerListPairs(words);
-		HashMap<String, Integer> evaluationResult = e.evaluateExpressionTree(invertedIndexSegment);
-		//System.out.println(evaluationResult.get("616274"));
-		List<String> topSearchResults = sortDocMap(evaluationResult);
+		HashMap<String, HashMap<String, IntArrayPair>> invertedIndexSegment = getStringIntegerListPairs(words);
+		HashMap<String, IntArrayPair> evaluationResult = e.evaluateExpressionTree(invertedIndexSegment);
+		
+		List<DocAndFreq> topSearchResults = sortDocMap(evaluationResult);
 		return topSearchResults;
 	}
 	
@@ -442,8 +422,8 @@ public class QueryProcessor {
 		int curItemsInWindow = 0;
 		int maxItemsInWindow = 0;
 		while (curUpperIndex < posArray.length) {
-			// If the two positions in our sliding window differ by 200 or more, move lower bound up 1 and remove 1 item from window
-			if ((posArray[curUpperIndex] - posArray[curLowerIndex]) > 200) {
+			// If the two positions in our sliding window differ by 400 or more, move lower bound up 1 and remove 1 item from window
+			if ((posArray[curUpperIndex] - posArray[curLowerIndex]) > 400) {
 				curLowerIndex++;
 				curItemsInWindow--;
 			} else {
@@ -457,44 +437,38 @@ public class QueryProcessor {
 			}
 			
 		}
-		return new int[] {maxLowerIndex, maxUpperIndex};
+		return new int[] {posArray[maxLowerIndex], posArray[maxUpperIndex]};
 	}
 	
+	// Merge two sorted arrays a1 and a2
+	public static int[] mergeArrays(int[] a1, int[] a2) {
+		int[] merged = new int[a1.length + a2.length];
+		int i = 0, j = 0, k = 0;
+		
+		while (i < a1.length && j < a2.length) {
+		    if (a1[i] < a2[j]){
+		    	merged[k++] = a1[i++];
+		    } else {
+		    	merged[k++] = a2[j++];               
+		    }
+		}
+		
+		while (i < a1.length) {
+			merged[k++] = a1[i++];
+		}
+		
+		while (j < a2.length) {
+		    merged[k++] = a2[j++];
+		}
+		return merged;
+	}
 	
 	public static void main(String[] args) throws IOException {
-		String query = "\"germany england france\"";
+		String query = "aidan";
 		QueryProcessor p = new QueryProcessor();
-		/*
-		HashMap<String, Integer> applesHM = new HashMap<String, Integer>();
-		applesHM.put("doc1", 5);
-		applesHM.put("doc2", 1);
-		HashMap<String, Integer> orangesHM = new HashMap<String, Integer>();
-		orangesHM.put("doc1", 2);
-		orangesHM.put("doc2", 4);
-		HashMap<String, Integer> grapesHM = new HashMap<String, Integer>();
-		grapesHM.put("doc1", 3);
-		grapesHM.put("doc3", 1);
-		grapesHM.put("doc4", 10);
-		HashMap<String, HashMap<String, Integer>> invertedIndex = new HashMap<String, HashMap<String, Integer>>();
-		invertedIndex.put("apples", applesHM);
-		invertedIndex.put("oranges", orangesHM);
-		invertedIndex.put("grapes", grapesHM);
-		QueryProcessor p = new QueryProcessor();
-		String[] tokens = p.tokenizeQuery(query);
-		ExpressionNode<String> e = p.generateParseTree(tokens);
-		HashMap<String, Integer> res = e.evaluateExpressionTree(invertedIndex);
-		
-		for (String key : res.keySet()) {
-			System.out.println("key = " + key + " : value = " + res.get(key));
-			
-		}
-		*/
-		//List<String> results = p.evaluateQuery(query);
 		ExpressionNode<String> e = p.generateParseTree(p.tokenizeQuery(query));
-		System.out.println(p.getAllWords(p.tokenizeQuery(query)));
-		System.out.println(Arrays.toString(p.tokenizeQuery(query)));
 		
-		
-		System.out.println(Arrays.toString(p.getRangeOfAreaToHighlight(new int[] {0, 1, 2, 3, 3, 3, 3, 300, 500, 505})));
+		System.out.println(Arrays.toString(p.evaluateQuery(query).get(0).getSampleArea()));
+		System.out.println(Arrays.toString(p.getRangeOfAreaToHighlight(new int[] {0, 3, 300, 500, 505})));
 	}
 }

@@ -10,7 +10,6 @@ import org.apache.hadoop.io.Text;
 
 
 public class MapFileReader {
-	private String lemmaPath;
 	private String docPath;
 	private Configuration conf;
 	private FileSystem fs;
@@ -21,7 +20,6 @@ public class MapFileReader {
 	
 	
 	public MapFileReader() throws IOException {
-		this.lemmaPath = "wordToLemMap";
 		this.docPath = "inv-wiki-map";
 		this.conf = new Configuration();
 		this.fs = FileSystem.get(conf);

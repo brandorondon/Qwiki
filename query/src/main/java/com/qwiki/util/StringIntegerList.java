@@ -101,7 +101,7 @@ public class StringIntegerList implements Writable {
 	}
 	//TODO: make changes to SIL to support the new positions array in StringInteger
 	private List<StringInteger> indices;
-	private Map<String, Integer> freqMap;
+	private Map<String, IntArrayPair> freqMap;
 	private Pattern p = Pattern.compile("<([^>]+),(\\d+),\\[(.*?)\\]>");
 
 	public StringIntegerList() {
@@ -131,11 +131,11 @@ public class StringIntegerList implements Writable {
 //		return indiceMap;
 //	}
 	
-	public Map<String, Integer> getFreqMap(){
+	public Map<String, IntArrayPair> getFreqMap(){
 		if (this.freqMap == null){
-			this.freqMap = new HashMap<String, Integer>();
+			this.freqMap = new HashMap<String, IntArrayPair>();
 			for(StringInteger index : this.indices){
-				this.freqMap.put(index.s, index.t);
+				this.freqMap.put(index.getString(), new IntArrayPair(index.getValue(), index.getPositions()));
 			}
 		}
 		return this.freqMap;

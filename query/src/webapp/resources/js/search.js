@@ -1,9 +1,12 @@
 $(document).ready(function() {
-	window["allowInfiniteSearch"] = false;
+	var allowInfiniteSearch = false;
 	var resBox = $("#results");
 	var searchButton = $("#search-button");
 	var queryTextBox = $("#query-input-box");
 	var doHover = true;
+	var numArticlesRetrieved = 0;
+	var searchResults = {};
+	var queryString = "";
 	
 	function retrieveArticleIDs() {
 		var articlesToRetrieve = [];
@@ -35,15 +38,18 @@ $(document).ready(function() {
 	
 	
 	function retrieveArticlesAjax() {
+		var curPos = numArticlesRetrieved;
 		var articles = retrieveArticleIDs();
+		var requestObj = {query : queryString, position : curPos, articleIDs : articles};
 		if (articles.length > 0) {
 			$.ajax({
 				type : "POST",
 				contentType : "application/json",
 				url: './retrieve_wiki_articles',
 				dataType: 'json',
-				data : arrayToString(articles),
+				data : JSON.stringify(requestObj),
 				success: function(json) {
+					console.log(json);
 					$("#results").append(jsonToHTML(json));
 					
 					if (doHover) {
@@ -63,7 +69,6 @@ $(document).ready(function() {
 	// Each time the user scrolls
 	resBox.scroll(function() {
 		// End of the document reached?
-		console.log("scroll");
 		var diff = (resBox[0].scrollHeight - resBox.scrollTop()) - resBox.outerHeight();
 	    if ((5 > diff && diff > -5) && allowInfiniteSearch) {
 			var articles = retrieveArticleIDs();
@@ -76,7 +81,7 @@ $(document).ready(function() {
 	searchButton.click(function(event) {
 		doHover = true;
 		event.preventDefault();
-		var queryString = queryTextBox.val();
+		queryString = queryTextBox.val();
 		$.ajax({
 			type : "POST",
 			contentType : "application/json",
@@ -85,12 +90,12 @@ $(document).ready(function() {
 			dataType: 'json',
 			success: function(json) {
 				
-				window["allowInfiniteSearch"] = false;
+				allowInfiniteSearch = false;
 				$("#results").html("");
-				window["searchResults"] = json.result;
-				window["numArticlesRetrieved"] = 0;
+				searchResults = json.result;
+				numArticlesRetrieved = 0;
 				retrieveArticlesAjax();
-				window["allowInfiniteSearch"] = true;
+				allowInfiniteSearch = true;
 			},
 			error : function(e) {
 				console.log("ERROR: ", e);

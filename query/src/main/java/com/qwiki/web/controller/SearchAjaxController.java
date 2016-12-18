@@ -2,7 +2,12 @@ package com.qwiki.web.controller;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+
+import com.google.gson.Gson;
 
 import javax.annotation.PostConstruct;
 
@@ -16,9 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import com.qwiki.util.ArticleFetcher;
+import com.qwiki.util.DocAndFreq;
 import com.qwiki.util.MapFileReader;
 import com.qwiki.util.QueryProcessor;
 import com.qwiki.web.jsonview.Views;
+import com.qwiki.web.model.AjaxSearchRequest;
 import com.qwiki.web.model.SearchResult;
 import com.qwiki.web.model.WikipediaListResult;
 import com.qwiki.web.model.WikipediaResult;
@@ -30,35 +37,44 @@ public class SearchAjaxController {
 	
 	@Autowired
 	private MapFileReader mapreader;
+	private ConcurrentHashMap<String, List<DocAndFreq>> cache;
 	
     @JsonView(Views.Public.class)
     @RequestMapping(value = "/get_all_matching_articles")
     public SearchResult processAJAXRequest(@RequestBody String query) throws IOException {
-    	QueryProcessor p = new QueryProcessor(mapreader);
+    	List<DocAndFreq> result;
     	SearchResult sr = new SearchResult();
-    	sr.result = p.evaluateQuery(query);
+    	sr.result = new LinkedList<String>();
+    	if (cache.containsKey(query)) {
+    		result = cache.get(query);
+    	} else {
+	    	QueryProcessor p = new QueryProcessor(mapreader);
+	    	result = p.evaluateQuery(query);
+	    	cache.put(query, result);
+    	}
+    	
+    	for (DocAndFreq df : result) {
+    		sr.result.add(df.getDocId());
+    	}
     	return sr;
     }
     
-    /*
     @PostConstruct
-    public void createMapFileReader() {
-    	try {
-			r = new MapFileReader();
-		} catch (IOException e) {
-			e.printStackTrace();
-			r = null;
-		}
+    public void createCache() {
+    	cache = new ConcurrentHashMap<String, List<DocAndFreq>>();
     }
-    */
     
     @JsonView(Views.Public.class)
     @RequestMapping(value = "/retrieve_wiki_articles")
-    public WikipediaListResult getArticles(@RequestBody String articles) 
+    public WikipediaListResult getArticles(@RequestBody String jsonString) 
     		throws IllegalArgumentException, IOException {
     	
     	ArticleFetcher fetcher = new ArticleFetcher();
-    	String[] articleIDs = articles.split(",");
+    	Gson gson = new Gson();
+    	AjaxSearchRequest asr = gson.fromJson(jsonString, AjaxSearchRequest.class);
+    	String[] articleIDs = asr.articleIDs;
+    	List<DocAndFreq> cachedQuery = cache.get(asr.query);
+    	int curPos = asr.position;
     	WikipediaListResult wlr = new WikipediaListResult();
     	wlr.result = new ArrayList<WikipediaResult>();
     	for (String articleID : articleIDs) {
@@ -67,14 +83,17 @@ public class SearchAjaxController {
     		wr.articleTitle = page.getTitle();
     		wr.articleID = articleID;
     		String content = page.getContent();
+    		int[] areaToHighlight = cachedQuery.get(curPos).getSampleArea();
     		int sampleSize;
     		if (content.length() > 500) {
     			sampleSize = 500;
     		} else {
     			sampleSize = content.length()-1;
     		}
+    		wr.areaToHighlight = content.substring(areaToHighlight[0], areaToHighlight[1]);
     		wr.contentSample = content.substring(0, sampleSize) + "...";
     		wlr.result.add(wr);
+    		curPos++;
     	}
     	return wlr;
     }

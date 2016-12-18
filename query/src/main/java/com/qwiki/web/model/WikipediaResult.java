@@ -9,6 +9,9 @@ public class WikipediaResult {
 	public String contentSample;
 	
 	@JsonView(Views.Public.class)
+	public String areaToHighlight;
+	
+	@JsonView(Views.Public.class)
 	public String articleTitle;
 	
 	@JsonView(Views.Public.class)
