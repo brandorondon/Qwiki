@@ -8,6 +8,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.Text;
 
+
 public class MapFileReader {
 	private String lemmaPath;
 	private String docPath;

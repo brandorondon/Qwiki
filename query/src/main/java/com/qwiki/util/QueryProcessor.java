@@ -19,10 +19,14 @@ public class QueryProcessor {
 	private final String docPath = "inv-wiki-map";
 	
 	public final static List<String> OPERATORS = Arrays.asList("and", "or", "not");
-	Pattern p = Pattern.compile("[\\(\\)\\p{L}]+");
+	Pattern tokenizerPattern = Pattern.compile("[\\\"\\(\\)\\p{L}]+");
 	
 	public QueryProcessor() throws IOException {
 		hdfsReader = new MapFileReader();
+	}
+	
+	public QueryProcessor(MapFileReader r) throws IOException {
+		hdfsReader = r;
 	}
 	
 	public class ExpressionNode<E> {
@@ -70,7 +74,6 @@ public class QueryProcessor {
 			return sb.toString();
 		}
 		
-		//TODO:
 		/*
 		 * Evaluate the expression tree with post order traversal
 		 */
@@ -119,11 +122,24 @@ public class QueryProcessor {
 				OperandNode<E> operandNode = (OperandNode<E>) this;
 				String word = operandNode.getOperandAsString();
 				return invertedIndexMapping.get(word);
+				
+			} else if (this instanceof N_aryOperatorNode) {
+				N_aryOperatorNode<E> n_aryNode = (N_aryOperatorNode<E>) this;
+				String operator = n_aryNode.getOperatorAsString();
+
+				if (operator.equals("pand")) {
+					for (OperandNode<E> operand : n_aryNode.getChildren()) {
+						String word = operand.getOperandAsString();
+						HashMap<String, Integer> mapping = invertedIndexMapping.get(word);
+						
+					}
+				}
 			}
 			return null;
 		}
 	}
-
+	
+	// Leaf nodes (just a container for a value)
 	public class OperandNode<E> extends ExpressionNode<E> {
 		
 		public OperandNode(E value) {
@@ -135,6 +151,7 @@ public class QueryProcessor {
 		}
 	}
 	
+	// Binary operators are currently the AND and OR operators
 	public class BinaryOperatorNode<E> extends ExpressionNode<E> {
 
 		public BinaryOperatorNode(E operation, ExpressionNode<E> left, ExpressionNode<E> right) {
@@ -154,6 +171,27 @@ public class QueryProcessor {
 		}
 	}
 	
+	// This is a unique class which was created to solve the phrase search problem
+	// Unlike other nodes, this can have N operand node children
+	public class N_aryOperatorNode<E> extends ExpressionNode<E> {
+		private List<OperandNode<E>> children;
+		
+		public N_aryOperatorNode(E operation, List<OperandNode<E>> children) {
+			// No left or right children, instead we have N children
+			super(operation, null, null);
+			this.children = children;
+		}
+		
+		public String getOperatorAsString() {
+			return value.toString();
+		}
+		
+		public List<OperandNode<E>> getChildren() {
+			return children;
+		}
+	}
+	
+	// A unary operator can be the NOT operator
 	public class UnaryOperatorNode<E> extends ExpressionNode<E> {
 
 		public UnaryOperatorNode(E operation, ExpressionNode<E> operand) {
@@ -176,7 +214,7 @@ public class QueryProcessor {
 			
 	public String[] tokenizeQuery(String inputQuery) {
 		LinkedList<String> tokenizedQuery = new LinkedList<String>();
-		Matcher m = p.matcher(inputQuery);
+		Matcher m = tokenizerPattern.matcher(inputQuery);
 		// Separate parenthesis, so "(query)" --> ["(", "query", ")"]
 		while (m.find()) {
 			String token = inputQuery.substring(m.start(), m.end()).toLowerCase();
@@ -185,6 +223,21 @@ public class QueryProcessor {
 				tokenizedQuery.add("not");
 				token = token.substring(3);
 			}
+			
+			boolean foundEndQuotation = false;
+			
+			// Beginning of phrase syntax will start with " character
+			if (token.startsWith("\"") && token.length() > 1) {
+				tokenizedQuery.add("\"");
+				token = token.substring(1);
+			}
+			
+			// Ending of phrase syntax will end with " character
+			if (token.endsWith("\"") && token.length() > 1) {
+				token = token.substring(0, token.length()-1);
+				foundEndQuotation = true;
+			}
+			
 			// Manually go through each char in token and look for parens
 			int startOfTokenBody = 0;
 			int endOfTokenBody = token.length();
@@ -206,6 +259,10 @@ public class QueryProcessor {
 			for (int j = 0; j < endParenCount; j++) {
 				tokenizedQuery.add(")");
 			}
+			
+			if (foundEndQuotation) {
+				tokenizedQuery.add("\"");
+			}
 		}
 		
 		String[] outputArray = new String[tokenizedQuery.size()];
@@ -224,7 +281,7 @@ public class QueryProcessor {
 	public List<String> getAllWords(String[] tokenizedQuery) {
 		List<String> words = new LinkedList<String>();
 		for (String token : tokenizedQuery) {
-			if (!OPERATORS.contains(token) && !token.equals("(") && !token.equals(")")) {
+			if (!OPERATORS.contains(token) && !token.equals("(") && !token.equals(")") && !token.equals("\"")) {
 				words.add(token);
 			}
 		}
@@ -287,6 +344,18 @@ public class QueryProcessor {
 			// throw exception here
 		} 
 		
+		// a phrase search syntax is surrounded by quotations
+		if (operatorIndex == -1 || (tokenizedQuery[startIndex].equals("\"") && tokenizedQuery[endIndex].equals("\""))) {
+			List<OperandNode<String>> phraseList = new LinkedList<OperandNode<String>>();
+			for (int tokenInPhraseIndex = startIndex + 1; tokenInPhraseIndex < endIndex-1; tokenInPhraseIndex++) {
+				phraseList.add(new OperandNode<String>(tokenizedQuery[tokenInPhraseIndex]));
+			}
+			// a phrase search will be represented as a operator I made up called "positional and"
+			// "positional and" behaves similar arithmetically to the binary and operator
+			// except it takes into account positions and can take in N operands (the operand child list) as arguments
+			return new N_aryOperatorNode<String>("pand", phraseList);
+		}
+		
 		// Means we did not find operator or there are useless parenthesis around expression
 		if (operatorIndex == -1 || (openingParenCount == 1 && tokenizedQuery[startIndex].equals("(") && tokenizedQuery[endIndex].equals(")"))) {
 			// if we found useless parens, recur on it
@@ -311,7 +380,7 @@ public class QueryProcessor {
 		return generateParseTree(tokenizedQuery, 0, tokenizedQuery.length-1);
 	}
 	
-	private class DocAndFreq implements Comparable{
+	private class DocAndFreq implements Comparable {
 		private String docId;
 		private Integer freq;
 		public DocAndFreq(String docId, Integer freq){
@@ -362,9 +431,38 @@ public class QueryProcessor {
 		return topSearchResults;
 	}
 	
+	// Sliding window approach to get area to highlight
+	public int[] getRangeOfAreaToHighlight(int[] posArray) {
+		int maxLowerIndex = 0;
+		int maxUpperIndex = 0;
+		
+		int curLowerIndex = 0;
+		int curUpperIndex = 0;
+		
+		int curItemsInWindow = 0;
+		int maxItemsInWindow = 0;
+		while (curUpperIndex < posArray.length) {
+			// If the two positions in our sliding window differ by 200 or more, move lower bound up 1 and remove 1 item from window
+			if ((posArray[curUpperIndex] - posArray[curLowerIndex]) > 200) {
+				curLowerIndex++;
+				curItemsInWindow--;
+			} else {
+				curItemsInWindow++;
+				if (curItemsInWindow > maxItemsInWindow) {
+					maxItemsInWindow = curItemsInWindow;
+					maxLowerIndex = curLowerIndex;
+					maxUpperIndex = curUpperIndex;
+				}
+				curUpperIndex++;
+			}
+			
+		}
+		return new int[] {maxLowerIndex, maxUpperIndex};
+	}
+	
 	
 	public static void main(String[] args) throws IOException {
-		String query = "japan and germany and france";
+		String query = "\"germany england france\"";
 		QueryProcessor p = new QueryProcessor();
 		/*
 		HashMap<String, Integer> applesHM = new HashMap<String, Integer>();
@@ -391,8 +489,12 @@ public class QueryProcessor {
 			
 		}
 		*/
-		List<String> results = p.evaluateQuery(query);
-		System.out.println(results.get(0));
+		//List<String> results = p.evaluateQuery(query);
+		ExpressionNode<String> e = p.generateParseTree(p.tokenizeQuery(query));
+		System.out.println(p.getAllWords(p.tokenizeQuery(query)));
+		System.out.println(Arrays.toString(p.tokenizeQuery(query)));
 		
+		
+		System.out.println(Arrays.toString(p.getRangeOfAreaToHighlight(new int[] {0, 1, 2, 3, 3, 3, 3, 300, 500, 505})));
 	}
 }

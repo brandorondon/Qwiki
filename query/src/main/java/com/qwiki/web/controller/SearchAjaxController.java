@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.PostConstruct;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import com.qwiki.util.ArticleFetcher;
+import com.qwiki.util.MapFileReader;
 import com.qwiki.util.QueryProcessor;
 import com.qwiki.web.jsonview.Views;
 import com.qwiki.web.model.SearchResult;
@@ -23,14 +27,30 @@ import edu.umd.cloud9.collection.wikipedia.WikipediaPage;
 
 @RestController
 public class SearchAjaxController {
+	
+	@Autowired
+	private MapFileReader mapreader;
+	
     @JsonView(Views.Public.class)
     @RequestMapping(value = "/get_all_matching_articles")
     public SearchResult processAJAXRequest(@RequestBody String query) throws IOException {
-    	QueryProcessor p = new QueryProcessor();
+    	QueryProcessor p = new QueryProcessor(mapreader);
     	SearchResult sr = new SearchResult();
     	sr.result = p.evaluateQuery(query);
     	return sr;
     }
+    
+    /*
+    @PostConstruct
+    public void createMapFileReader() {
+    	try {
+			r = new MapFileReader();
+		} catch (IOException e) {
+			e.printStackTrace();
+			r = null;
+		}
+    }
+    */
     
     @JsonView(Views.Public.class)
     @RequestMapping(value = "/retrieve_wiki_articles")
