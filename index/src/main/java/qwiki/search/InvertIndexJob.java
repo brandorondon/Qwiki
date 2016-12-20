@@ -111,7 +111,6 @@ public class InvertIndexJob {
 		//job.setNumReduceTasks(0);
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(StringIntegerList.class); // TODO: keep in mind this change
-		job.setOutputFormatClass(MapFileOutputFormat.class);
 		
 		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
 		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));

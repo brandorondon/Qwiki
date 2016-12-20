@@ -55,7 +55,7 @@ public class LemmaIndexJob {
 		
 		private FileSystem dfs;
 		private String unique = (new BigInteger(256, new Random())).toString();
-		private BufferedWriter br;
+		//private BufferedWriter br;
 		StringBuilder buffer = new StringBuilder();
 		String dir;
 
@@ -65,6 +65,7 @@ public class LemmaIndexJob {
 			this.props.put("annotators", "tokenize, ssplit, pos, lemma");
 			this.pipeline = new StanfordCoreNLP(props);
 			
+			/*
 			Configuration config = new Configuration();
 			   config.addResource(new Path("/etc/hadoop/conf/core-site.xml"));
 			   config.addResource(new Path("/etc/hadoop/conf/hdfs-site.xml"));
@@ -78,6 +79,7 @@ public class LemmaIndexJob {
 			  dir = dfs.getWorkingDirectory()+ "/wordToLem/";
 			  Path filePath = new Path(dir + this.unique);
 			  this.br = new BufferedWriter(new OutputStreamWriter(dfs.create(filePath, true)));
+	    	*/
 	    }
 		
 		private int[] convToIntArr(List<Integer> l){
@@ -119,12 +121,12 @@ public class LemmaIndexJob {
 			for(String word : wordToLemList.keySet()){	
 				si = reduceSI(wordToLemList.get(word));
 				sil.add(si);
-				this.buffer.append(word + "->" + si.getString() + "\n");
+				//this.buffer.append(word + "->" + si.getString() + "\n");
 			}
-			br.append(this.buffer.toString());
-			buffer.setLength(0); //clear the buffer to avoid heap overflow or GC problems
+			//br.append(this.buffer.toString());
+			//buffer.setLength(0); //clear the buffer to avoid heap overflow or GC problems
 			StringIntegerList finalSIL = new StringIntegerList(sil);
-			
+			System.out.println(page.getTitle());
 			context.write(new Text(page.getDocid()), finalSIL);					
 		}
 		
@@ -165,7 +167,7 @@ public class LemmaIndexJob {
 		Configuration conf = new Configuration();
 		String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
 		if (otherArgs.length != 2){
-			System.err.println("Usage: <jar> <in> <out>");		
+			System.err.println("Usage: <jar> <in> <out>");	
 		}
 		System.out.println("********** RUNNING LEMMATIZE ************");
 		Job job = new Job(conf, "Lemmatize");

@@ -1,18 +1,29 @@
 package com.qwiki.util;
 
-public class DocAndFreq implements Comparable  {
+import java.util.List;
+
+public class QueryData implements Comparable  {
 	private String docId;
 	private Integer freq;
 	private int[] sampleArea;
+	private List<String> tokens;
 	
-	public DocAndFreq(String docId, Integer freq, int[] sampleArea){
+	public QueryData(String docId, Integer freq, int[] sampleArea){
 		this.sampleArea = sampleArea;
 		this.docId = docId;
 		this.freq = freq;
+		this.tokens = null;
+	}
+	
+	public QueryData(String docId, Integer freq, int[] sampleArea, List<String> tokens){
+		this.sampleArea = sampleArea;
+		this.docId = docId;
+		this.freq = freq;
+		this.tokens = tokens;
 	}
 	
 	public int compareTo(Object o){
-		DocAndFreq other = (DocAndFreq) o;		
+		QueryData other = (QueryData) o;		
 		if(other.getFreq() > this.freq){
 			return 1;
 		} else if (other.getFreq() < this.freq){
@@ -31,5 +42,9 @@ public class DocAndFreq implements Comparable  {
 	
 	public int[] getSampleArea(){
 		return this.sampleArea;
+	}
+	
+	public List<String> getTokens(){
+		return this.tokens;
 	}
 }

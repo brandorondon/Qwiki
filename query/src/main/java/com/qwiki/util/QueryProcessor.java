@@ -388,31 +388,34 @@ public class QueryProcessor {
 		return generateParseTree(tokenizedQuery, 0, tokenizedQuery.length-1);
 	}
 	
-	private List<DocAndFreq> sortDocMap(HashMap<String, IntArrayPair> map){
-		List<DocAndFreq> l = new ArrayList<DocAndFreq>();
+	private List<QueryData> sortDocMap(HashMap<String, IntArrayPair> map, List<String> tokens){
+		List<QueryData> l = new ArrayList<QueryData>();
 		for(String key : map.keySet()){
 			IntArrayPair pair = map.get(key);
 			System.out.println(Arrays.toString(pair.posArray));
 			int[] sampleBounds = getRangeOfAreaToHighlight(pair.posArray);
-			l.add(new DocAndFreq(key, pair.frequency, sampleBounds));
+			l.add(new QueryData(key, pair.frequency, sampleBounds, tokens));
 		}
 		Collections.sort(l);
 		return l;
 	}
 	
-	public List<DocAndFreq> evaluateQuery(String query) throws IOException {
+	public List<QueryData> evaluateQuery(String query) throws IOException {
 		String[] tokens = tokenizeQuery(query);
 		ExpressionNode<String> e = generateParseTree(tokens);
 		List<String> words = getAllWords(tokens);
 		HashMap<String, HashMap<String, IntArrayPair>> invertedIndexSegment = getStringIntegerListPairs(words);
 		HashMap<String, IntArrayPair> evaluationResult = e.evaluateExpressionTree(invertedIndexSegment);
 		
-		List<DocAndFreq> topSearchResults = sortDocMap(evaluationResult);
+		List<QueryData> topSearchResults = sortDocMap(evaluationResult, words);
 		return topSearchResults;
 	}
 	
 	// Sliding window approach to get area to highlight
 	public int[] getRangeOfAreaToHighlight(int[] posArray) {
+		if (posArray.length == 1 || posArray.length == 0) {
+			return null;
+		}
 		int maxLowerIndex = 0;
 		int maxUpperIndex = 0;
 		

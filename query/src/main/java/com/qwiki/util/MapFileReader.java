@@ -20,7 +20,7 @@ public class MapFileReader {
 	
 	
 	public MapFileReader() throws IOException {
-		this.docPath = "inv-wiki-map";
+		this.docPath = "/inv-wiki-map3";
 		this.conf = new Configuration();
 		this.fs = FileSystem.get(conf);
 		conf.addResource(new Path(coreSitePath));

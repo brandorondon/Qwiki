@@ -3,8 +3,10 @@ package com.qwiki.web.controller;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.gson.Gson;
@@ -21,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import com.qwiki.util.ArticleFetcher;
-import com.qwiki.util.DocAndFreq;
+import com.qwiki.util.QueryData;
 import com.qwiki.util.MapFileReader;
 import com.qwiki.util.QueryProcessor;
 import com.qwiki.web.jsonview.Views;
@@ -37,12 +39,12 @@ public class SearchAjaxController {
 	
 	@Autowired
 	private MapFileReader mapreader;
-	private ConcurrentHashMap<String, List<DocAndFreq>> cache;
+	private ConcurrentHashMap<String, List<QueryData>> cache;
 	
     @JsonView(Views.Public.class)
     @RequestMapping(value = "/get_all_matching_articles")
     public SearchResult processAJAXRequest(@RequestBody String query) throws IOException {
-    	List<DocAndFreq> result;
+    	List<QueryData> result;
     	SearchResult sr = new SearchResult();
     	sr.result = new LinkedList<String>();
     	if (cache.containsKey(query)) {
@@ -53,15 +55,28 @@ public class SearchAjaxController {
 	    	cache.put(query, result);
     	}
     	
-    	for (DocAndFreq df : result) {
-    		sr.result.add(df.getDocId());
+    	for (QueryData qd : result) {
+    		sr.result.add(qd.getDocId());
     	}
     	return sr;
     }
     
     @PostConstruct
     public void createCache() {
-    	cache = new ConcurrentHashMap<String, List<DocAndFreq>>();
+    	cache = new ConcurrentHashMap<String, List<QueryData>>();
+    }
+    
+    public String highlightArticleSample(String sample, Set<String> queryTokens) {
+    	StringBuilder sb = new StringBuilder();
+    	String[] tokenizedInput = sample.split("[^a-zA-Z]");
+    	for (String token : tokenizedInput) {
+    		if (queryTokens.contains(token.toLowerCase())) {
+    			sb.append("<kbd>" + token + "</kbd> ");
+    		} else {
+    			sb.append(token + " ");
+    		}
+    	}
+    	return sb.toString();
     }
     
     @JsonView(Views.Public.class)
@@ -73,7 +88,7 @@ public class SearchAjaxController {
     	Gson gson = new Gson();
     	AjaxSearchRequest asr = gson.fromJson(jsonString, AjaxSearchRequest.class);
     	String[] articleIDs = asr.articleIDs;
-    	List<DocAndFreq> cachedQuery = cache.get(asr.query);
+    	List<QueryData> cachedQuery = cache.get(asr.query);
     	int curPos = asr.position;
     	WikipediaListResult wlr = new WikipediaListResult();
     	wlr.result = new ArrayList<WikipediaResult>();
@@ -85,13 +100,27 @@ public class SearchAjaxController {
     		String content = page.getContent();
     		int[] areaToHighlight = cachedQuery.get(curPos).getSampleArea();
     		int sampleSize;
-    		if (content.length() > 500) {
-    			sampleSize = 500;
+    		if (content.length() > 100) {
+    			sampleSize = 100;
     		} else {
     			sampleSize = content.length()-1;
     		}
-    		wr.areaToHighlight = content.substring(areaToHighlight[0], areaToHighlight[1]);
-    		wr.contentSample = content.substring(0, sampleSize) + "...";
+    		
+    		Set<String> tokenSet = new HashSet<String>();
+    		for (String token : cachedQuery.get(curPos).getTokens()) {
+    			tokenSet.add(token);
+    		}
+    		
+    		String chunkWithMostMatches = "";
+    		if (areaToHighlight != null) {
+    			chunkWithMostMatches = content.substring(areaToHighlight[0], areaToHighlight[1]);
+    		}
+    		String startHighlight = highlightArticleSample(content.substring(0, sampleSize), tokenSet);
+    		String bestMatchesHighlight = highlightArticleSample(chunkWithMostMatches, tokenSet);
+    		String contentStartSample = "<i>" + startHighlight + "</i>... <hr> ..." + bestMatchesHighlight;
+    		
+    		wr.contentSample = contentStartSample;
+    		
     		wlr.result.add(wr);
     		curPos++;
     	}
