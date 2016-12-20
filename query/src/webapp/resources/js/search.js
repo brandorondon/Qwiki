@@ -60,9 +60,6 @@ $(document).ready(function() {
 					}
 				}
 			});
-			
-			//resBox.append("1<br>");
-			//console.log("appending");
 		}
 	}
 	
@@ -89,7 +86,7 @@ $(document).ready(function() {
 			data : queryString,
 			dataType: 'json',
 			success: function(json) {
-				
+				console.log(json);
 				allowInfiniteSearch = false;
 				$("#results").html("");
 				searchResults = json.result;
@@ -99,7 +96,6 @@ $(document).ready(function() {
 			},
 			error : function(e) {
 				console.log("ERROR: ", e);
-				display(e);
 			}
 		});		
 	});
